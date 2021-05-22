@@ -1,0 +1,7 @@
+box b0 0 0 0 10 10 10
+box b1 0 0 0 5 10 5
+bcut b2 b0 b1
+donly b2
+vinit View1
+vdisplay -dispMode 1 b2
+vfit

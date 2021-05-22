@@ -1,0 +1,7 @@
+pcylinder c 2 3
+box b -1 -1 2 1 1 3
+cut x c b
+donly x
+vinit View1
+vdisplay -dispMode 1 x
+vfit

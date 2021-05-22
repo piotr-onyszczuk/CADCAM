@@ -1,0 +1,9 @@
+box b0 0  0 0 12 7 6
+plane p 4 -1 3 0 1 0
+pcylinder c p 1 3
+bcut b1 b0 c
+donly b1
+vinit View1
+vdisplay -dispMode 1 b1
+vaspects b1 -setFaceBoundaryDraw 1 -setFaceBoundaryColor WHITE -isoontriangulation 1
+vfit

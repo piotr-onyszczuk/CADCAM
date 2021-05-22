@@ -1,0 +1,8 @@
+plane p 0 0 1 0 0 1
+pcylinder c 2 3
+pcylinder b p 1 3
+cut x c b
+donly x
+vinit View1
+vdisplay -dispMode 1 x
+vfit

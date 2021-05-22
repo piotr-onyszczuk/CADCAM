@@ -1,0 +1,11 @@
+box b0 0 0 0 12 7 6
+#3 różne wersje
+box b1 10 5 4 2 2 2
+#box b1 6 5 4 2 2 2
+#box b1 6 1 4 2 2 2
+bcut b2 b0 b1
+donly b2
+vinit View1
+vdisplay -dispMode 1 b2
+vaspects b2 -setFaceBoundaryDraw 1 -setFaceBoundaryColor WHITE -isoontriangulation 1
+vfit

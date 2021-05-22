@@ -1,0 +1,10 @@
+plane p 0 0 0 5 5 5
+pcylinder c p 2 3
+box b 0 0 0 2 2 2
+cut x c b
+donly x
+vinit View1
+vdisplay -dispMode 1 x
+vfit
+
+brepiges x C:\\Users\\piotr\\Desktop\\aa.iges

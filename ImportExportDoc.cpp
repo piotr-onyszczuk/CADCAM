@@ -15,6 +15,9 @@
 #include <BRepAdaptor_Surface.hxx>
 #include <ShapeAnalysis_Edge.hxx>
 #include <BRepAdaptor_Curve.hxx>
+#include <chrono>
+#include <string>
+#include <cmath>
 
 
 #ifdef _DEBUG
@@ -215,6 +218,52 @@ void SetAllNeighborsIsHole(int i, int except)
 	}
 }
 
+float DistancePoints(gp_Pnt a, gp_Pnt b)
+{
+	return sqrt(pow(a.X() - b.X(), 2) + pow(a.Y() - b.Y(), 2) + pow(a.Z() - b.Z(), 2));
+}
+
+float VecLength2(gp_Vec vec)
+{
+	return sqrt(pow(vec.X(), 2) + pow(vec.Y(), 2) + pow(vec.Z(), 2));
+}
+
+gp_Vec NormalizeVector(gp_Vec vec)
+{
+	float length = VecLength2(vec);
+	gp_Vec res;
+	res.SetX(vec.X() / length);
+	res.SetY(vec.Y() / length);
+	res.SetZ(vec.Z() / length);
+	return res;
+}
+
+gp_Pnt SubtractPoints(gp_Pnt a, gp_Pnt b)
+{
+	gp_Pnt x;
+	x.SetX(b.X() - a.X());
+	x.SetY(b.Y() - a.Y());
+	x.SetZ(b.Z() - a.Z());
+	return x;
+}
+
+gp_Vec Cross(gp_Pnt A, gp_Vec B)
+{
+	gp_Vec a;
+	a.SetX(A.Y() * B.Z() - A.Z() * B.Y());
+	a.SetY(A.Z() * B.X() - A.X() * B.Z());
+	a.SetZ(A.X() * B.Y() - A.Y() * B.X());
+	return a;
+}
+
+float DistanceAB(gp_Pnt A, gp_Vec Anorm, gp_Pnt B)
+{
+	auto vec = SubtractPoints(A, B);
+	gp_Vec v = Cross(vec, Anorm);
+	auto vlength = VecLength2(v);
+	return vlength / VecLength2(Anorm);
+}
+
 void CImportExportDoc::OnFileImportIges()
 {
 	Handle(TopTools_HSequenceOfShape) aSeqOfShape = CImportExport::ReadIGES();
@@ -297,6 +346,67 @@ void CImportExportDoc::OnFileImportIges()
 		}
 	}
 
+	std::string holeDepth;
+	std::string circleCentre;
+	std::string circleRadious;
+	int holeTubeFace;
+	int downFace = -1;
+
+	for (int i = 0; i < faces.size(); i++)
+	{
+		if (faces[i].isHole == false && faces[i].hasHole == true)
+		{
+			int holeNeighbours = 0;
+
+			for (int j = 0; j < faces[i].neighbors.size(); j++)
+			{
+				if (faces[faces[i].neighbors[j]].isHole == true)
+				{
+					holeTubeFace = faces[i].neighbors[j];
+					holeNeighbours++;
+				}
+			}
+
+			if (holeNeighbours == 1)
+			{
+				for (int j = 0; j < faces[holeTubeFace].neighbors.size(); j++)
+				{
+					if (faces[faces[holeTubeFace].neighbors[j]].isHole == true)
+					{
+						downFace = faces[holeTubeFace].neighbors[j];
+					}
+				}
+			}
+
+			if (holeNeighbours == 1 && downFace != -1)
+			{
+				auto up = faces[i];
+				auto tube = faces[holeTubeFace];
+				auto down = faces[downFace];
+
+
+				auto c = DistancePoints(up.center, down.center);
+				auto b = DistanceAB(down.center, down.norm, up.center);
+				auto a = sqrt(pow(c, 2) - pow(b, 2));
+				holeDepth = std::to_string(a);
+
+				auto normalizedDownNormal = NormalizeVector(down.norm);
+
+				gp_Vec centre;
+				centre.SetX(down.center.X() + a * normalizedDownNormal.X());
+				centre.SetY(down.center.Y() + a * normalizedDownNormal.Y());
+				centre.SetZ(down.center.Z() + a * normalizedDownNormal.Z());
+
+				circleCentre = "X: " + std::to_string(centre.X()) + ", Y: " + std::to_string(centre.Y()) + ", Z: " + std::to_string(centre.Z());
+
+				auto r = DistanceAB(down.center, down.norm, tube.center);
+
+				circleRadious = std::to_string(r);
+			}
+		}
+	}
+
+
 	for (int i = 0; i < faces.size(); ++i)
 	{
 		Handle(AIS_Shape) aface = new AIS_Shape(faces[i].face);
@@ -307,14 +417,57 @@ void CImportExportDoc::OnFileImportIges()
 		else
 		{
 			if (faces[i].hasHole == true)
-				myAISContext->SetColor(aface, Quantity_NOC_RED, Standard_False);
+			{
+				int holeNeighbours = 0;
+				for (int j = 0; j < faces[i].neighbors.size(); j++)
+				{
+					if (faces[faces[i].neighbors[j]].isHole == true)
+					{
+						holeNeighbours++;
+					}
+				}
+				if (holeNeighbours == 1)
+				{
+					myAISContext->SetColor(aface, Quantity_NOC_BLUE, Standard_False);
+				}
+				else
+				{
+					myAISContext->SetColor(aface, Quantity_NOC_RED, Standard_False);
+				}
+			}
 			else
+			{
 				myAISContext->SetColor(aface, Quantity_NOC_YELLOW, Standard_False);
+			}
 		}
+
+
+
 		myAISContext->SetMaterial(aface, Graphic3d_NOM_PLASTIC, Standard_False);
 		myAISContext->SetTransparency(aface, 0.0f, Standard_False);
 		myAISContext->Display(aface, 1, 0, Standard_False);
 	}
+
+	if (downFace != -1)
+	{
+		Handle(AIS_Shape) dFace = new AIS_Shape(faces[downFace].face);
+		myAISContext->SetColor(dFace, Quantity_NOC_ORANGE, Standard_False);
+		myAISContext->SetMaterial(dFace, Graphic3d_NOM_PLASTIC, Standard_False);
+		myAISContext->SetTransparency(dFace, 0.0f, Standard_False);
+		myAISContext->Display(dFace, 1, 0, Standard_False);
+	}
+
+	std::time_t t = std::time(0);
+	std::tm* now = std::localtime(&t);
+	std::string filename = std::to_string(now->tm_mday) + "-" + std::to_string(now->tm_mon + 1) + "-" + std::to_string(now->tm_year + 1900);
+	std::string outfilename = "./Sizes " + filename + ".txt";
+	std::ofstream outfile(outfilename);
+
+	outfile << "Depth: " + holeDepth << std::endl;
+	outfile << "Center: " + circleCentre << std::endl;
+	outfile << "Radious: " + circleRadious << std::endl;
+
+	outfile.close();
 
 	Fit();
 }

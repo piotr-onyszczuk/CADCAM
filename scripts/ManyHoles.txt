@@ -1,0 +1,28 @@
+box b0 0  0 0 12 7 6
+
+
+plane p 1.5 -1 3 0 1 0
+pcylinder c1 p 1 2
+
+plane p 4 -1 3 0 1 0
+pcylinder c p 1 3
+
+plane p 6.5 -1 3 0 1 0
+pcylinder c2 p 1 4
+
+plane p 9 -1 3 0 1 0
+pcylinder c3 p 1 20
+
+plane p 3 4 3 0 0 1
+pcylinder c4 p 2 3
+
+bcut b1 b0 c
+bcut b2 b1 c1
+bcut b3 b2 c2
+bcut b4 b3 c3
+bcut b5 b4 c4
+donly b5
+vinit View1
+vdisplay -dispMode 1 b5
+vaspects b1 -setFaceBoundaryDraw 1 -setFaceBoundaryColor WHITE -isoontriangulation 1
+vfit

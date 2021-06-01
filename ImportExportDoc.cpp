@@ -1,4 +1,4 @@
-// ImportExportDoc.cpp : implementation of the CImportExportDoc class
+ï»¿// ImportExportDoc.cpp : implementation of the CImportExportDoc class
 //
 
 
@@ -165,13 +165,23 @@ class Face
 public:
 	TopoDS_Face face;
 	gp_Vec norm; //wektor normalny
-	gp_Pnt center; //punkt na œcianie
-	gp_Vec vec1, vec2; //wektory "rozpinaj¹ce" œcianê
-	int wires; //liczba obwodów
-	std::vector<gp_Pnt> edges; //lista krawêdzi (krawêdŸ reprezentuje jej œrodek)
-	std::vector<int> neighbors; //lista s¹siadów indeksów w wektorze faces
+	gp_Pnt center; //punkt na Å“cianie
+	gp_Vec vec1, vec2; //wektory "rozpinajÂ¹ce" Å“cianÃª
+	int wires; //liczba obwodÃ³w
+	std::vector<gp_Pnt> edges; //lista krawÃªdzi (krawÃªdÅ¸ reprezentuje jej Å“rodek)
+	std::vector<int> neighbors; //lista sÂ¹siadÃ³w indeksÃ³w w wektorze faces
 	bool hasHole = false;
 	bool isHole = false;
+};
+
+class Hole
+{
+public:
+	std::string holeDepth; //glebokosc
+	std::string circleCentre; //srodek dziury na scenie
+	std::string circleRadious; //promien dziury 
+	int holeTubeFace;
+	int downFace = -1;
 };
 
 bool EdgesAreEqual(gp_Pnt e1, gp_Pnt e2)
@@ -346,63 +356,110 @@ void CImportExportDoc::OnFileImportIges()
 		}
 	}
 
-	std::string holeDepth;
-	std::string circleCentre;
-	std::string circleRadious;
-	int holeTubeFace;
-	int downFace = -1;
+	//std::string holeDepth;
+	//std::string circleCentre;
+	//std::string circleRadious;
+	//int holeTubeFace;
+	//int downFace = -1;
+
+	std::vector<Hole> holes;
 
 	for (int i = 0; i < faces.size(); i++)
 	{
 		if (faces[i].isHole == false && faces[i].hasHole == true)
 		{
-			int holeNeighbours = 0;
-
-			for (int j = 0; j < faces[i].neighbors.size(); j++)
+			for (int j = 0; j < faces[i].neighbors.size(); j++) //obliczenia dla kaÅ¼dej Å›ciany
 			{
-				if (faces[faces[i].neighbors[j]].isHole == true)
+				if (faces[faces[i].neighbors[j]].isHole == true) //jest dziura
 				{
-					holeTubeFace = faces[i].neighbors[j];
-					holeNeighbours++;
-				}
-			}
-
-			if (holeNeighbours == 1)
-			{
-				for (int j = 0; j < faces[holeTubeFace].neighbors.size(); j++)
-				{
-					if (faces[faces[holeTubeFace].neighbors[j]].isHole == true)
+					int holeTubeFace = faces[i].neighbors[j];
+					if (faces[holeTubeFace].neighbors.size() == 2) //jest okrÄ…gla dziura
 					{
-						downFace = faces[holeTubeFace].neighbors[j];
+						for (int k = 0; k < faces[holeTubeFace].neighbors.size(); k++)
+						{
+							if (faces[faces[holeTubeFace].neighbors[k]].isHole == true) //ma spÃ³d i to jest ten spÃ³d
+							{
+								int downFace = faces[holeTubeFace].neighbors[k];
+								Hole hole;
+								hole.holeTubeFace = holeTubeFace;
+								hole.downFace = downFace;
+
+								auto up = faces[i];
+								auto tube = faces[holeTubeFace];
+								auto down = faces[downFace];
+
+								auto c = DistancePoints(up.center, down.center);
+								auto b = DistanceAB(down.center, down.norm, up.center);
+								auto a = sqrt(pow(c, 2) - pow(b, 2));
+								hole.holeDepth = std::to_string(a);
+
+								auto normalizedDownNormal = NormalizeVector(down.norm);
+
+								gp_Vec centre;
+								centre.SetX(down.center.X() + a * normalizedDownNormal.X());
+								centre.SetY(down.center.Y() + a * normalizedDownNormal.Y());
+								centre.SetZ(down.center.Z() + a * normalizedDownNormal.Z());
+
+								hole.circleCentre = "X: " + std::to_string(centre.X()) + ", Y: " + std::to_string(centre.Y()) + ", Z: " + std::to_string(centre.Z());
+
+								auto r = DistanceAB(down.center, down.norm, tube.center);
+
+								hole.circleRadious = std::to_string(r);
+								holes.push_back(hole);
+							}
+						}
 					}
 				}
 			}
 
-			if (holeNeighbours == 1 && downFace != -1)
-			{
-				auto up = faces[i];
-				auto tube = faces[holeTubeFace];
-				auto down = faces[downFace];
+
+			//int holeNeighbours = 0;
+
+			//for (int j = 0; j < faces[i].neighbors.size(); j++)
+			//{
+			//	if (faces[faces[i].neighbors[j]].isHole == true)
+			//	{
+			//		holeTubeFace = faces[i].neighbors[j];
+			//		holeNeighbours++;
+			//	}
+			//}
+
+			//if (holeNeighbours == 1)
+			//{
+			//	for (int j = 0; j < faces[holeTubeFace].neighbors.size(); j++)
+			//	{
+			//		if (faces[faces[holeTubeFace].neighbors[j]].isHole == true)
+			//		{
+			//			downFace = faces[holeTubeFace].neighbors[j];
+			//		}
+			//	}
+			//}
+
+			//if (holeNeighbours == 1 && downFace != -1)
+			//{
+			//	auto up = faces[i];
+			//	auto tube = faces[holeTubeFace];
+			//	auto down = faces[downFace];
 
 
-				auto c = DistancePoints(up.center, down.center);
-				auto b = DistanceAB(down.center, down.norm, up.center);
-				auto a = sqrt(pow(c, 2) - pow(b, 2));
-				holeDepth = std::to_string(a);
+			//	auto c = DistancePoints(up.center, down.center);
+			//	auto b = DistanceAB(down.center, down.norm, up.center);
+			//	auto a = sqrt(pow(c, 2) - pow(b, 2));
+			//	holeDepth = std::to_string(a);
 
-				auto normalizedDownNormal = NormalizeVector(down.norm);
+			//	auto normalizedDownNormal = NormalizeVector(down.norm);
 
-				gp_Vec centre;
-				centre.SetX(down.center.X() + a * normalizedDownNormal.X());
-				centre.SetY(down.center.Y() + a * normalizedDownNormal.Y());
-				centre.SetZ(down.center.Z() + a * normalizedDownNormal.Z());
+			//	gp_Vec centre;
+			//	centre.SetX(down.center.X() + a * normalizedDownNormal.X());
+			//	centre.SetY(down.center.Y() + a * normalizedDownNormal.Y());
+			//	centre.SetZ(down.center.Z() + a * normalizedDownNormal.Z());
+			//	
+			//	circleCentre = "X: " + std::to_string(centre.X()) + ", Y: " + std::to_string(centre.Y()) + ", Z: " + std::to_string(centre.Z());
 
-				circleCentre = "X: " + std::to_string(centre.X()) + ", Y: " + std::to_string(centre.Y()) + ", Z: " + std::to_string(centre.Z());
+			//	auto r = DistanceAB(down.center, down.norm, tube.center);
 
-				auto r = DistanceAB(down.center, down.norm, tube.center);
-
-				circleRadious = std::to_string(r);
-			}
+			//	circleRadious = std::to_string(r);
+			//}
 		}
 	}
 
@@ -441,31 +498,36 @@ void CImportExportDoc::OnFileImportIges()
 			}
 		}
 
-
-
 		myAISContext->SetMaterial(aface, Graphic3d_NOM_PLASTIC, Standard_False);
 		myAISContext->SetTransparency(aface, 0.0f, Standard_False);
 		myAISContext->Display(aface, 1, 0, Standard_False);
 	}
-
-	if (downFace != -1)
+	for (int i = 0; i < holes.size(); i++)
 	{
-		Handle(AIS_Shape) dFace = new AIS_Shape(faces[downFace].face);
-		myAISContext->SetColor(dFace, Quantity_NOC_ORANGE, Standard_False);
-		myAISContext->SetMaterial(dFace, Graphic3d_NOM_PLASTIC, Standard_False);
-		myAISContext->SetTransparency(dFace, 0.0f, Standard_False);
-		myAISContext->Display(dFace, 1, 0, Standard_False);
+		if (holes[i].downFace != -1)
+		{
+			Handle(AIS_Shape) dFace = new AIS_Shape(faces[holes[i].downFace].face);
+			myAISContext->SetColor(dFace, Quantity_NOC_ORANGE, Standard_False);
+			myAISContext->SetMaterial(dFace, Graphic3d_NOM_PLASTIC, Standard_False);
+			myAISContext->SetTransparency(dFace, 0.0f, Standard_False);
+			myAISContext->Display(dFace, 1, 0, Standard_False);
+		}
 	}
+
 
 	std::time_t t = std::time(0);
 	std::tm* now = std::localtime(&t);
 	std::string filename = std::to_string(now->tm_mday) + "-" + std::to_string(now->tm_mon + 1) + "-" + std::to_string(now->tm_year + 1900);
 	std::string outfilename = "./Sizes " + filename + ".txt";
 	std::ofstream outfile(outfilename);
-
-	outfile << "Depth: " + holeDepth << std::endl;
-	outfile << "Center: " + circleCentre << std::endl;
-	outfile << "Radious: " + circleRadious << std::endl;
+	for (int i = 0; i < holes.size(); i++)
+	{
+		outfile << "Hole number: " + std::to_string(i + 1) << std::endl;
+		outfile << "Depth: " + holes[i].holeDepth << std::endl;
+		outfile << "Center: " + holes[i].circleCentre << std::endl;
+		outfile << "Radious: " + holes[i].circleRadious << std::endl;
+		outfile << "" << std::endl;
+	}
 
 	outfile.close();
 

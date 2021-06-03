@@ -287,6 +287,8 @@ void CImportExportDoc::OnFileImportIges()
 			int d = 0;
 			TopoDS_Shape face = Ex1.Current();
 			TopoDS_Face ff = TopoDS::Face(face);
+			Face f;
+			f.face = ff;
 
 			BRepAdaptor_Surface aSurface(ff);
 			Standard_Real u1, u2, v1, v2;
@@ -302,8 +304,6 @@ void CImportExportDoc::OnFileImportIges()
 			aSurface.D1((u1 + u2) / 2, (v1 + v2) / 2, aCenterOfFace, aVec1, aVec2);
 			aNormalOfFace = aVec1 ^ aVec2;
 
-			Face f;
-			f.face = TopoDS::Face(face);
 			f.norm = aNormalOfFace;
 			f.center = aCenterOfFace;
 			f.vec1 = aVec1;

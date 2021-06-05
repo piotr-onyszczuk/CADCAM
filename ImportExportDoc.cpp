@@ -182,6 +182,7 @@ public:
 	std::string circleRadious; //promien dziury 
 	int holeTubeFace;
 	int downFace = -1;
+	int upFace = -1;
 };
 
 bool EdgesAreEqual(gp_Pnt e1, gp_Pnt e2)
@@ -383,6 +384,7 @@ void CImportExportDoc::OnFileImportIges()
 								Hole hole;
 								hole.holeTubeFace = holeTubeFace;
 								hole.downFace = downFace;
+								hole.upFace = i;
 
 								auto up = faces[i];
 								auto tube = faces[holeTubeFace];
@@ -475,22 +477,7 @@ void CImportExportDoc::OnFileImportIges()
 		{
 			if (faces[i].hasHole == true)
 			{
-				int holeNeighbours = 0;
-				for (int j = 0; j < faces[i].neighbors.size(); j++)
-				{
-					if (faces[faces[i].neighbors[j]].isHole == true)
-					{
-						holeNeighbours++;
-					}
-				}
-				if (holeNeighbours == 1)
-				{
-					myAISContext->SetColor(aface, Quantity_NOC_BLUE, Standard_False);
-				}
-				else
-				{
-					myAISContext->SetColor(aface, Quantity_NOC_RED, Standard_False);
-				}
+				myAISContext->SetColor(aface, Quantity_NOC_RED, Standard_False);
 			}
 			else
 			{
@@ -508,6 +495,15 @@ void CImportExportDoc::OnFileImportIges()
 		{
 			Handle(AIS_Shape) dFace = new AIS_Shape(faces[holes[i].downFace].face);
 			myAISContext->SetColor(dFace, Quantity_NOC_ORANGE, Standard_False);
+			myAISContext->SetMaterial(dFace, Graphic3d_NOM_PLASTIC, Standard_False);
+			myAISContext->SetTransparency(dFace, 0.0f, Standard_False);
+			myAISContext->Display(dFace, 1, 0, Standard_False);
+		}
+
+		if (holes[i].upFace != -1)
+		{
+			Handle(AIS_Shape) dFace = new AIS_Shape(faces[holes[i].upFace].face);
+			myAISContext->SetColor(dFace, Quantity_NOC_BLUE, Standard_False);
 			myAISContext->SetMaterial(dFace, Graphic3d_NOM_PLASTIC, Standard_False);
 			myAISContext->SetTransparency(dFace, 0.0f, Standard_False);
 			myAISContext->Display(dFace, 1, 0, Standard_False);

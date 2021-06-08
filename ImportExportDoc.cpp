@@ -278,8 +278,10 @@ float DistanceAB(gp_Pnt A, gp_Vec Anorm, gp_Pnt B)
 Handle(TopTools_HSequenceOfShape) aSeqOfShape;
 void CImportExportDoc::OnFileImportIges()
 {
+	myAISContext->RemoveAll(true);
+	delete m_pcoloredshapeList;
+	m_pcoloredshapeList = new CColoredShapes();
 	aSeqOfShape = CImportExport::ReadIGES();
-
 	for (int i = 1; i <= aSeqOfShape->Length(); i++)
 	{
 		m_pcoloredshapeList->Add(Quantity_NOC_YELLOW, aSeqOfShape->Value(i));

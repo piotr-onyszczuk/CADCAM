@@ -275,9 +275,21 @@ float DistanceAB(gp_Pnt A, gp_Vec Anorm, gp_Pnt B)
 	return vlength / VecLength2(Anorm);
 }
 
+Handle(TopTools_HSequenceOfShape) aSeqOfShape;
 void CImportExportDoc::OnFileImportIges()
 {
-	Handle(TopTools_HSequenceOfShape) aSeqOfShape = CImportExport::ReadIGES();
+	aSeqOfShape = CImportExport::ReadIGES();
+
+	for (int i = 1; i <= aSeqOfShape->Length(); i++)
+	{
+		m_pcoloredshapeList->Add(Quantity_NOC_YELLOW, aSeqOfShape->Value(i));
+		m_pcoloredshapeList->Display(myAISContext);
+	}
+	Fit();
+	return;
+}
+void ProceedShapes(Handle(AIS_InteractiveContext) myAISContext)
+{
 	faces.clear();
 	myAISContext->RemoveAll(true);
 	for (int i = 1; i <= aSeqOfShape->Length(); i++)
@@ -526,9 +538,16 @@ void CImportExportDoc::OnFileImportIges()
 	}
 
 	outfile.close();
-
-	Fit();
 }
+
+void CImportExportDoc::OnFileExportStl()
+{
+	ProceedShapes(myAISContext);
+	Fit();
+
+
+}
+
 #pragma endregion
 
 
@@ -557,11 +576,6 @@ void CImportExportDoc::OnFileExportStep()
 void CImportExportDoc::OnFileExportVrml()
 {
 	CImportExport::SaveVRML(myAISContext);
-}
-
-void CImportExportDoc::OnFileExportStl()
-{
-	CImportExport::SaveSTL(myAISContext);
 }
 
 void  CImportExportDoc::Popup(const Standard_Integer  x,
